@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <link rel="stylesheet" href="./bootstrap.css">
+</head>
+
+<body>
+    <div id="app" class="container">
+        數字：{{ number }}
+        <p>
+            <button @click="plusNumber">+</button>
+            <button @click="minsNumber">-</button>
+        </p>
+        <p>
+            <input type="text" :value="text" @input="(event) => text = event.target.value">
+            {{text}}
+        </p>
+
+        <p>
+            <input type="text" v-model="textB">
+            {{textB}}
+        </p>
+
+        <div v-show="number ==1">
+            number是1
+        </div>
+        <div v-if="number ==2">
+            number是2 (v-if)
+        </div>
+
+        <input type="text" v-model="todoInput">
+        <button @click="addToDoInput">add</button>
+        <p>
+        <ul v-for="(todo,index) in todoList">
+            <li @click="delTodo(index)">{{todo}}</li>
+        </ul>
+        </p>
+
+        <p>
+        <ul v-for="(user,index) in users">
+            <li @click="delTodo(index)">{{user.username}}</li>
+        </ul>
+        </p>
+
+        <h3>使用者清單</h3>
+        <hr>
+        <div class="mb-5 d-flex justify-content-between">
+            <button @click="addUser" class="btn btn-success mb-1">新增使用者</button>
+            <input type="text" name="search" id="search" v-model="searchQuery" placeholder="搜尋">
+        </div>
+
+        <table id="table" class="table table-hover">
+            <tr>
+                <th>使用者id</th>
+                <th>使用者名稱</th>
+                <th>使用者權限</th>
+                <th>操作</th>
+            </tr>
+            <tr v-for="(user,index) in filterUsers">
+                <td>{{user.id}}</td>
+                <td>{{user.username}}</td>
+                <td>{{user.role==1 ? "管理者" : "一般使用者"}}</td>
+                <td>
+                    <div class="btn-group">
+                        <button @click="editUser(user)" class="btn btn-warning">修改</button>
+                        <button @click="delUser(user.id)" class="btn btn-danger">刪除</button>
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <div id="userModal" class="modal fade" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">{{ modal_title }}</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body" v-if="userData">
+                        <p>
+                            <label for="username">使用者名稱</label>
+                            <input class="form-control" type="text" id="username" v-model="userData.username">
+                        </p>
+                        <p>
+                            <label for="password">使用者密碼</label>
+                            <input class="form-control" type="text" id="password" v-model="userData.password">
+                        </p>
+                        <p>
+                            <label for="role">使用者權限</label>
+                            <input class="form-control" type="text" id="role" v-model="userData.role">
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" @click="saveUserData" class="btn btn-primary">Save changes</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+<script src="https://code.jquery.com/jquery-3.7.1.slim.js"
+    integrity="sha256-UgvvN8vBkgO0luPSUl2s8TIlOSYRoGFAX4jlCIm9Adc=" crossorigin="anonymous"></script>
+<script src="./bootstrap.js"></script>
+<script src="./vue.3.5.13.js"></script>
+<script>
+    const { createApp, ref, computed } = Vue;
+    createApp({
+        setup() {
+            const number = ref(0);
+
+            const text = ref('aaaa');
+            const textB = ref('bbbb');
+
+            const todoInput = ref("");
+            const todoList = ref([]);
+
+            // 使用者資料變數
+            const users = ref(null); // 所有使用者
+            const userData = ref(null); // 單一使用者資料(編輯或是新增)
+            const modal_title = ref(null);
+            const isLoading = ref(false); // 資料載入狀態
+            const searchQuery = ref("");
+
+            const getUsers = async () => {
+                isLoading.value = true; // 設定載入狀態為真
+                try {
+                    const res = await fetch("./sql.php?do=getusers");
+
+                    users.value = await res.json();
+                    console.log(users.value);
+                } finally {
+                    isLoading.value = false; // 解除載入中狀態
+                }
+            }
+
+            getUsers();
+
+            const editUser = (userDataSend) => {
+                console.log(userDataSend);
+                modal_title.value = "編輯";
+                userData.value = {
+                    id: userDataSend.id,
+                    username: userDataSend.username,
+                    password: userDataSend.password,
+                    role: userDataSend.role
+                }
+
+                $("#userModal").modal("show");
+            }
+
+            const addUser = () => {
+                modal_title.value = "新增";
+                userData.value = {
+                    id: "",
+                    username: "",
+                    password: "",
+                    role: ""
+                }
+                $("#userModal").modal("show");
+            }
+
+            const delUser = async (id) => {
+                const res = await fetch("./sql.php?do=deluser&id=" + id);
+                const result = await res.text();
+                if (result) {
+                    getUsers();
+                }
+            }
+
+            const saveUserData = async () => {
+                console.log(modal_title)
+                if (userData.value.username == "") {
+                    alert("使用者名稱為必填");
+                    return; // 類似中斷指令
+                }
+                const parmas = new URLSearchParams(userData.value);
+                let apiUrl;
+                if (modal_title.value == "編輯") {
+                    // 編輯使用者
+                    apiUrl = "./sql.php?do=edituser";
+                } else {
+                    // 新增使用者
+                    apiUrl = "./sql.php?do=adduser";
+                }
+                const res = await fetch(apiUrl, {
+                    method: "POST",
+                    body: parmas
+                });
+                const result = await res.text();
+                if (result) {
+                    $("#userModal").modal("hide");
+                    getUsers();
+                }
+            }
+
+
+            const filterUsers = computed(() => {
+                if (!users.value) return;
+                return users.value.filter(u => JSON.stringify(u).includes(searchQuery.value))
+            })
+
+
+            const addToDoInput = () => {
+                todoList.value.push(todoInput.value);
+                console.log(todoList.value);
+                todoInput.value = "";
+            }
+            const delTodo = (index) => {
+                todoList.value.splice(index, 1);
+            }
+
+            console.log(number);
+            console.log(number.value);
+
+
+            function plusNumber() {
+                number.value++;
+            }
+
+            const minsNumber = () => {
+                number.value = number.value - 1;
+            }
+
+
+            return {
+                number,
+                plusNumber,
+                minsNumber,
+                text,
+                textB,
+                todoInput,
+                todoList,
+                addToDoInput,
+                delTodo,
+                users,
+                userData,
+                editUser,
+                modal_title,
+                saveUserData,
+                addUser,
+                delUser,
+                filterUsers,
+                searchQuery
+            }
+        }
+
+    }).mount("#app");
+</script>
+
+</html>
