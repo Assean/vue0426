@@ -7,13 +7,19 @@
     <title>Vue 使用者與待辦事項管理系統</title>
     <!-- 引入 Bootstrap CSS -->
     <link rel="stylesheet" href="./bootstrap.css">
+    <!-- 引入外部腳本 -->
+    <script src="https://code.jquery.com/jquery-3.7.1.slim.js" integrity="sha256-UgvvN8vBkgO0luPSUl2s8TIlOSYRoGFAX4jlCIm9Adc=" crossorigin="anonymous"></script>
+    <script src="./bootstrap.js"></script>
+    <script src="./vue.3.5.13.js"></script>
+    <!-- CSS style -->
     <style>
         .todo-item, .user-item { cursor: pointer; }
         .todo-item:hover, .user-item:hover { text-decoration: line-through; color: red; }
     </style>
 </head>
-
+<!-- body -->
 <body>
+
     <div id="app" class="container mt-4">
         
         <!-- 區塊 1：計數器與基本資料綁定 -->
@@ -22,8 +28,9 @@
                 <h5 class="card-title">基本測試區塊</h5>
                 <p>數字：{{ number }}</p>
                 <div class="mb-3">
-                    <button class="btn btn-outline-primary btn-sm me-2" @click="plusNumber">+</button>
-                    <button class="btn btn-outline-primary btn-sm" @click="minsNumber">-</button>
+                    <!-- 將加減邏輯直接寫在標籤內 -->
+                    <button class="btn btn-outline-primary btn-sm me-2" @click="number++">+</button>
+                    <button class="btn btn-outline-primary btn-sm" @click="number--">-</button>
                 </div>
 
                 <div class="mb-3">
@@ -57,7 +64,8 @@
                 </div>
                 
                 <ul class="list-group mb-3">
-                    <li class="list-group-item todo-item" v-for="(todo, index) in todoList" :key="index" @click="delTodo(index)">
+                    <!-- 將刪除邏輯直接寫在標籤內：todoList.splice(index, 1) -->
+                    <li class="list-group-item todo-item" v-for="(todo, index) in todoList" :key="index" @click="todoList.splice(index, 1)">
                         {{ todo }} (點擊刪除)
                     </li>
                 </ul>
@@ -72,6 +80,7 @@
             </div>
         </div>
 
+        <!-- 最重要 -->
         <!-- 區塊 3：使用者管理系統 (API 串接) -->
         <div class="card shadow-sm">
             <div class="card-body">
@@ -107,6 +116,7 @@
                             <td>
                                 <span class="badge" :class="user.role == 1 ? 'bg-primary' : 'bg-secondary'">
                                     {{ user.role == 1 ? "管理者" : "一般使用者" }}
+                                    <!-- 若數字=0就是管理員如果不是就是一般使用者 -->
                                 </span>
                             </td>
                             <td>
@@ -130,7 +140,6 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">{{ modal_title }}</h5>
-                        <!-- Bootstrap 4 / 5 的關閉按鈕語法可能略有不同，這裡保留原本相容 jQuery 版本的寫法 -->
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
@@ -150,7 +159,7 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn class="btn btn-secondary" data-dismiss="modal">取消</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
                         <button type="button" @click="saveUserData" class="btn btn-primary">儲存變更</button>
                     </div>
                 </div>
@@ -159,11 +168,6 @@
 
     </div>
 
-    <!-- 引入外部腳本 -->
-    <script src="https://code.jquery.com/jquery-3.7.1.slim.js" integrity="sha256-UgvvN8vBkgO0luPSUl2s8TIlOSYRoGFAX4jlCIm9Adc=" crossorigin="anonymous"></script>
-    <script src="./bootstrap.js"></script>
-    <!-- 請確認你的 bootstrap 是 4 還是 5，如果沒用到 jQuery 特性，Bootstrap 5 可移除 jQuery -->
-    <script src="./vue.3.5.13.js"></script>
 
     <script>
         const { createApp, ref, computed, onMounted } = Vue;
@@ -171,35 +175,28 @@
         createApp({
             setup() {
                 // ==============================
-                // 1. 基礎測試與計數器
+                // 1. 基礎測試變數
                 // ==============================
                 const number = ref(0);
                 const text = ref('aaaa');
                 const textB = ref('bbbb');
 
-                const plusNumber = () => number.value++;
-                const minsNumber = () => number.value--;
-
                 // ==============================
-                // 2. 待辦事項 Todo List
+                // 2. 待辦事項 Todo List 變數與函式
                 // ==============================
                 const todoInput = ref("");
                 const todoList = ref([]);
 
                 const addToDoInput = () => {
-                    if(todoInput.value.trim() === '') return; // 防止輸入空白
+                    if(todoInput.value.trim() === '') return; 
                     todoList.value.push(todoInput.value.trim());
                     todoInput.value = "";
                 };
-                
-                const delTodo = (index) => {
-                    todoList.value.splice(index, 1);
-                };
 
                 // ==============================
-                // 3. 使用者管理系統
+                // 3. 使用者管理系統變數與函式
                 // ==============================
-                const users = ref([]);       // 預設為空陣列較安全
+                const users = ref([]);       
                 const userData = ref(null); 
                 const modal_title = ref("");
                 const isLoading = ref(false); 
@@ -232,7 +229,6 @@
                     if(!query) return users.value;
 
                     return users.value.filter(u => {
-                        // 只搜尋需要的欄位，避免把密碼等雜訊也搜出來
                         return u.username.toLowerCase().includes(query) || 
                                u.id.toString().includes(query);
                     });
@@ -248,20 +244,19 @@
                 // 開啟編輯視窗
                 const editUser = (userDataSend) => {
                     modal_title.value = "編輯";
-                    // 這裡使用淺拷貝，避免在 Modal 內輸入時直接改動到外面的 Table 資料
-                    userData.value = { ...userDataSend }; 
+                    userData.value = { ...userDataSend }; // 淺拷貝
                     $("#userModal").modal("show");
                 };
 
                 // 刪除使用者
                 const delUser = async (id) => {
-                    if(!confirm(`確定要刪除 ID: ${id} 的使用者嗎？`)) return; // 增加防呆機制
+                    if(!confirm(`確定要刪除 ID: ${id} 的使用者嗎？`)) return;
 
                     try {
                         const res = await fetch("./sql.php?do=deluser&id=" + id);
                         const result = await res.text();
                         if (result) {
-                            getUsers(); // 重新整理列表
+                            getUsers(); 
                         }
                     } catch (error) {
                         console.error("刪除失敗:", error);
@@ -295,13 +290,10 @@
                     }
                 };
 
-                // 將需要給 Template 用的變數與方法回傳
+                // 回傳變數與方法給 Template
                 return {
-                    // 基礎測試
-                    number, plusNumber, minsNumber, text, textB,
-                    // Todo
-                    todoInput, todoList, addToDoInput, delTodo,
-                    // User System
+                    number, text, textB,
+                    todoInput, todoList, addToDoInput,
                     users, userData, modal_title, isLoading, searchQuery, filterUsers,
                     addUser, editUser, delUser, saveUserData
                 };
